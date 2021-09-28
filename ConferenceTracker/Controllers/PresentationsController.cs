@@ -4,18 +4,22 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ConferenceTracker.Controllers
 {
+    
     public class PresentationsController : Controller
     {
+        private readonly ILogger _logger;
         private readonly IPresentationRepository _presentationRepository;
         private readonly ISpeakerRepository _speakerRepository;
 
-        public PresentationsController(IPresentationRepository presentationRepository, ISpeakerRepository speakerRepository)
+        public PresentationsController(IPresentationRepository presentationRepository, ISpeakerRepository speakerRepository, ILogger<PresentationsController> logger)
         {
             _presentationRepository = presentationRepository;
             _speakerRepository = speakerRepository;
+            _logger = logger;
         }
 
         public IActionResult Index()
@@ -64,16 +68,20 @@ namespace ConferenceTracker.Controllers
         [Authorize(Roles = "Administrators")]
         public IActionResult Edit(int? id)
         {
+            _logger.LogInformation($"Getting presentation id:{id} for edit");
             if (id == null)
             {
+                _logger.LogError(message: "Presentation id was null");
                 return NotFound();
             }
 
             var presentation = _presentationRepository.GetPresentation((int)id);
             if (presentation == null)
             {
+                _logger.LogWarning(message: $"Presentation id,{id}, was not found");
                 return NotFound();
             }
+            _logger.LogInformation(message: $"pPresentation id,{id}, was found. Returning 'Edit View");
             ViewData["SpeakerId"] = new SelectList(_speakerRepository.GetAllSpeakers(), "Id", "Id", presentation?.SpeakerId);
             return View(presentation);
         }
@@ -83,8 +91,10 @@ namespace ConferenceTracker.Controllers
         [Authorize(Roles = "Administrators")]
         public IActionResult Edit(int id, [Bind("Id,Name,StartDateTime,EndDateTime,Description,SpeakerId")] Presentation presentation)
         {
+            
             if (id != presentation?.Id)
             {
+                
                 return NotFound();
             }
 
